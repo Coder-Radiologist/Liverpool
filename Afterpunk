@@ -9340,6 +9340,13 @@ def neoplastik_lezyon_penceresi():
         if not konum or not boyut:
             birinci_cumle = ""
         else:
+            # Boyut formatlama
+            boyut_text = boyut.strip()
+            if 'x' in boyut_text.lower() or '×' in boyut_text.lower():
+                boyut_suffix = 'mm boyutlarında'
+            else:
+                boyut_suffix = 'mm çapında'
+
             # Kontrastlanma cümlesi
             kontrast_cumleleri = []
             for faz_kodu in faz_vars:
@@ -9360,7 +9367,7 @@ def neoplastik_lezyon_penceresi():
 
             kontrast_cumlesi = ', '.join(kontrast_cumleleri)
 
-            birinci_cumle = f"Pankreas {konum} bölgesinde, {boyut} mm boyutlarında, {kontrast_cumlesi} lezyon izlendi."
+            birinci_cumle = f"Pankreas {konum} bölgesinde, {boyut} {boyut_suffix}, {kontrast_cumlesi} lezyon izlendi."
 
         # 2. Cümle (Vasküler İnvazyonlar)
         invazyon_cumleleri = []
@@ -9491,7 +9498,7 @@ def neoplastik_lezyon_penceresi():
         ascites_cumlesi = '. '.join(ascites_cumleleri)
 
         # Metni oluşturma
-        cumleler = [birinci_cumle, ikinci_cumle, ascites_cumlesi, omental_cumle, pankreatik_kanal_cumlesi]
+        cumleler = [birinci_cumle, ikinci_cumle, pankreatik_kanal_cumlesi, ascites_cumlesi, omental_cumle]
         final_metin = '\n'.join([c for c in cumleler if c])
 
         # Cümleyi metin alanına yazdıralım (Rapor Takip Ekranı)
@@ -9501,7 +9508,7 @@ def neoplastik_lezyon_penceresi():
         cumle_text.config(state='disabled')
 
     # 1. Konum verisi (pancmassloc_var)
-    pancmassloc_var = tk.StringVar(value='')
+    pancmassloc_var = tk.StringVar(value='baş')  # 'Baş' varsayılan seçili
 
     frame_konum = tk.LabelFrame(inner_content_frame, text="Pankreas lezyonunun konumunu belirtiniz")
     frame_konum.pack(fill='x', padx=10, pady=5)
@@ -9614,9 +9621,13 @@ def neoplastik_lezyon_penceresi():
     sub_frame.columnconfigure(0, weight=1)
     sub_frame.columnconfigure(1, weight=1)
 
-    # Vasküler İnvazyonlar - Sol tarafta
+    # Vasküler İnvazyonlar - Tek bir frame içinde, üç sütun halinde düzenlendi
     frame_invazyon = tk.LabelFrame(sub_frame, text="Vasküler İnvazyonlar")
-    frame_invazyon.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+    frame_invazyon.pack(fill='both', expand=True, padx=5, pady=5)
+
+    frame_invazyon.columnconfigure(0, weight=1)
+    frame_invazyon.columnconfigure(1, weight=1)
+    frame_invazyon.columnconfigure(2, weight=1)
 
     # Scrollbar ekliyoruz
     invazyon_canvas = tk.Canvas(frame_invazyon)
@@ -9635,19 +9646,30 @@ def neoplastik_lezyon_penceresi():
 
     invazyon_inner_frame.bind('<Configure>', on_invazyon_configure)
 
-    # Vasküler invazyon seçenekleri
+    # Birinci sütun (Aberan vasküler anatomi ve diğer invazyon seçenekleri)
+    frame_invazyon_col1 = tk.Frame(invazyon_inner_frame)
+    frame_invazyon_col1.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
 
+    # İkinci sütun (Lezyon SMA ve SMV)
+    frame_invazyon_col2 = tk.Frame(invazyon_inner_frame)
+    frame_invazyon_col2.grid(row=0, column=1, sticky='nsew', padx=5, pady=5)
+
+    # Üçüncü sütun (Lezyon celiac trunkusu ve diğer)
+    frame_invazyon_col3 = tk.Frame(invazyon_inner_frame)
+    frame_invazyon_col3.grid(row=0, column=2, sticky='nsew', padx=5, pady=5)
+
+    # Birinci sütun içeriği
     # 1. Aberan vasküler anatomi
     aberran_var = tk.IntVar()
     aberran_option_var = tk.StringVar()
     aberran_combobox_var = tk.StringVar(value='SMA')
 
     # Main checkbox
-    aberran_cb = tk.Checkbutton(invazyon_inner_frame, text="Aberan vasküler anatomi", variable=aberran_var, command=lambda: toggle_aberran_options())
+    aberran_cb = tk.Checkbutton(frame_invazyon_col1, text="Aberan vasküler anatomi", variable=aberran_var, command=lambda: toggle_aberran_options())
     aberran_cb.pack(anchor='w')
 
     # Frame for radiobuttons (initially disabled)
-    aberran_frame = tk.Frame(invazyon_inner_frame)
+    aberran_frame = tk.Frame(frame_invazyon_col1)
     aberran_frame.pack(anchor='w', padx=20)
 
     # Radiobuttons
@@ -9711,24 +9733,26 @@ def neoplastik_lezyon_penceresi():
         'Splenik arter invazyonu izlenmedi. Yağ planları temiz biçimde ayırt edilebilmektedir.': tk.IntVar(),
     }
 
-    for text, var in vaskuler_invazyon_vars.items():
-        tk.Checkbutton(invazyon_inner_frame, text=text, variable=var, command=update_sentence).pack(anchor='w')
-
     # SMV'e mesafe checkbox ve entry
     smv_mesafe_var = vaskuler_invazyon_vars['SMV invazyonu izlenmedi. Yağ planları temiz biçimde ayırt edilebilmektedir.']
     smv_mesafe_check_var = tk.IntVar()
     smv_mesafe_value = tk.StringVar()
+    
+    for text, var in vaskuler_invazyon_vars.items():
+        cb = tk.Checkbutton(frame_invazyon_col1, text=text, variable=var, command=update_sentence, wraplength=200, anchor='w', justify='left')
+        cb.pack(anchor='w')
+        if text == 'SMV invazyonu izlenmedi. Yağ planları temiz biçimde ayırt edilebilmektedir.':
+            # SMV'e mesafe checkbox ve entry
+            smv_mesafe_frame = tk.Frame(frame_invazyon_col1)
+            smv_mesafe_frame.pack(anchor='w', padx=40)
 
-    smv_mesafe_frame = tk.Frame(invazyon_inner_frame)
-    smv_mesafe_frame.pack(anchor='w', padx=20)
+            smv_mesafe_check = tk.Checkbutton(smv_mesafe_frame, text="SMV'e mesafe", variable=smv_mesafe_check_var, command=update_sentence, state='disabled')
+            smv_mesafe_check.pack(side='left')
 
-    smv_mesafe_check = tk.Checkbutton(smv_mesafe_frame, text="SMV'e mesafe", variable=smv_mesafe_check_var, command=update_sentence, state='disabled')
-    smv_mesafe_check.pack(side='left')
+            smv_mesafe_entry = tk.Entry(smv_mesafe_frame, textvariable=smv_mesafe_value, width=10, state='disabled')
+            smv_mesafe_entry.pack(side='left')
 
-    smv_mesafe_entry = tk.Entry(smv_mesafe_frame, textvariable=smv_mesafe_value, width=10, state='disabled')
-    smv_mesafe_entry.pack(side='left')
-
-    tk.Label(smv_mesafe_frame, text="mm'dir.", state='disabled').pack(side='left')
+            tk.Label(smv_mesafe_frame, text="mm'dir.", state='disabled').pack(side='left')
 
     def toggle_smv_mesafe_options():
         state = 'normal' if smv_mesafe_var.get() else 'disabled'
@@ -9753,12 +9777,13 @@ def neoplastik_lezyon_penceresi():
     smv_mesafe_var.trace_add('write', lambda *args: toggle_smv_mesafe_options())
     smv_mesafe_check_var.trace_add('write', lambda *args: toggle_smv_mesafe_entry())
 
+    # İkinci sütun içeriği (Lezyon SMA ve SMV)
     # SMA kompleksi
     sma_complex_var = tk.IntVar()
-    sma_complex_cb = tk.Checkbutton(invazyon_inner_frame, text="Lezyon SMA'yı", variable=sma_complex_var, command=lambda: toggle_sma_complex_options())
+    sma_complex_cb = tk.Checkbutton(frame_invazyon_col2, text="Lezyon SMA'yı", variable=sma_complex_var, command=lambda: toggle_sma_complex_options())
     sma_complex_cb.pack(anchor='w')
 
-    sma_complex_frame = tk.Frame(invazyon_inner_frame)
+    sma_complex_frame = tk.Frame(frame_invazyon_col2)
     sma_complex_frame.pack(anchor='w', padx=20)
 
     # Radiobuttons for degree
@@ -9795,10 +9820,10 @@ def neoplastik_lezyon_penceresi():
 
     # SMV kompleksi
     smv_complex_var = tk.IntVar()
-    smv_complex_cb = tk.Checkbutton(invazyon_inner_frame, text="Lezyon SMV'yi", variable=smv_complex_var, command=lambda: toggle_smv_complex_options())
+    smv_complex_cb = tk.Checkbutton(frame_invazyon_col2, text="Lezyon SMV'yi", variable=smv_complex_var, command=lambda: toggle_smv_complex_options())
     smv_complex_cb.pack(anchor='w')
 
-    smv_complex_frame = tk.Frame(invazyon_inner_frame)
+    smv_complex_frame = tk.Frame(frame_invazyon_col2)
     smv_complex_frame.pack(anchor='w', padx=20)
 
     # Radiobuttons for degree
@@ -9833,12 +9858,13 @@ def neoplastik_lezyon_penceresi():
 
     smv_complex_var.trace_add('write', lambda *args: toggle_smv_complex_options())
 
+    # Üçüncü sütun içeriği (Lezyon celiac trunkusu ve diğer)
     # Celiac trunkus kompleksi
     celiac_complex_var = tk.IntVar()
-    celiac_complex_cb = tk.Checkbutton(invazyon_inner_frame, text="Lezyon celiac trunkusu", variable=celiac_complex_var, command=lambda: toggle_celiac_complex_options())
+    celiac_complex_cb = tk.Checkbutton(frame_invazyon_col3, text="Lezyon celiac trunkusu", variable=celiac_complex_var, command=lambda: toggle_celiac_complex_options())
     celiac_complex_cb.pack(anchor='w')
 
-    celiac_complex_frame = tk.Frame(invazyon_inner_frame)
+    celiac_complex_frame = tk.Frame(frame_invazyon_col3)
     celiac_complex_frame.pack(anchor='w', padx=20)
 
     # Radiobuttons for degree
@@ -9875,10 +9901,10 @@ def neoplastik_lezyon_penceresi():
 
     # Ana hepatik arter veya Splenik arter kompleksi
     vessel_complex_var = tk.IntVar()
-    vessel_complex_cb = tk.Checkbutton(invazyon_inner_frame, text="Lezyon", variable=vessel_complex_var, command=lambda: toggle_vessel_complex_options())
+    vessel_complex_cb = tk.Checkbutton(frame_invazyon_col3, text="Lezyon", variable=vessel_complex_var, command=lambda: toggle_vessel_complex_options())
     vessel_complex_cb.pack(anchor='w')
 
-    vessel_complex_frame = tk.Frame(invazyon_inner_frame)
+    vessel_complex_frame = tk.Frame(frame_invazyon_col3)
     vessel_complex_frame.pack(anchor='w', padx=20)
 
     # Combobox for vessel selection
@@ -9919,9 +9945,23 @@ def neoplastik_lezyon_penceresi():
 
     vessel_complex_var.trace_add('write', lambda *args: toggle_vessel_complex_options())
 
+    # Pankreatik Kanal ve Ascites/Omental Tutulum - Alt tarafta yan yana
+    kanal_ascites_frame = tk.Frame(inner_content_frame)
+    kanal_ascites_frame.pack(fill='x', padx=10, pady=5)
+
+    # Pankreatik Kanal - Sol tarafta
+    frame_kanal = tk.LabelFrame(kanal_ascites_frame, text="Pankreatik Kanal")
+    frame_kanal.pack(side='left', fill='both', expand=True, padx=5)
+
+    wirsung_var = tk.StringVar(value='')
+
+    tk.Radiobutton(frame_kanal, text="Tüm uzanımı boyunca kesintisiz izlenmiştir.", variable=wirsung_var, value='kesintisiz', command=update_sentence).pack(anchor='w')
+    tk.Radiobutton(frame_kanal, text="Kitle seviyesine kadar genişlemiş biçimde uzanmakta olup kitle düzeyinde ani biçimde kesintiye uğramaktadır.", variable=wirsung_var, value='kesintiye_ugruyor', command=update_sentence).pack(anchor='w')
+    tk.Radiobutton(frame_kanal, text="Ampulla ve kitle arasında normal kalibrasyonda takip edilmiştir.", variable=wirsung_var, value='normal_kalibrasyonda', command=update_sentence).pack(anchor='w')
+
     # Ascites ve Omental Tutulum - Sağ tarafta
-    frame_ascites = tk.LabelFrame(sub_frame, text="Ascites ve Omental Tutulum")
-    frame_ascites.grid(row=0, column=1, sticky='nsew', padx=5, pady=5)
+    frame_ascites = tk.LabelFrame(kanal_ascites_frame, text="Ascites ve Omental Tutulum")
+    frame_ascites.pack(side='left', fill='both', expand=True, padx=5)
 
     ascites_vars = {
         'peripankreatik_serbest_mayi': tk.IntVar(),
@@ -9964,16 +10004,6 @@ def neoplastik_lezyon_penceresi():
     tk.Label(frame_buyuklugu, text="mm çaplı", state='disabled').pack(side='left')
     omental_tutulum_size_var.trace_add('write', lambda *args: update_sentence())
 
-    # Pankreatik Kanal - Wirsung Subframe
-    frame_kanal = tk.LabelFrame(inner_content_frame, text="Pankreatik Kanal")
-    frame_kanal.pack(fill='x', padx=10, pady=5)
-
-    wirsung_var = tk.StringVar(value='')
-
-    tk.Radiobutton(frame_kanal, text="Tüm uzanımı boyunca kesintisiz izlenmiştir.", variable=wirsung_var, value='kesintisiz', command=update_sentence).pack(anchor='w')
-    tk.Radiobutton(frame_kanal, text="Kitle seviyesine kadar genişlemiş biçimde uzanmakta olup kitle düzeyinde ani biçimde kesintiye uğramaktadır.", variable=wirsung_var, value='kesintiye_ugruyor', command=update_sentence).pack(anchor='w')
-    tk.Radiobutton(frame_kanal, text="Ampulla ve kitle arasında normal kalibrasyonda takip edilmiştir.", variable=wirsung_var, value='normal_kalibrasyonda', command=update_sentence).pack(anchor='w')
-
     # İlk güncelleme
     update_sentence()
 
@@ -10005,7 +10035,6 @@ def neoplastik_lezyon_penceresi():
 
     tk.Button(button_frame, text="KAYDET", command=metin_toplama_kutucugu_goster).pack(side='left', padx=5)
     tk.Button(button_frame, text="KAPAT", command=pencere.destroy).pack(side='left', padx=5)
-
 
 
 def degisiklik_sec(zone):
